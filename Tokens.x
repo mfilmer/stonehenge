@@ -7,6 +7,7 @@
 
 tokens :-
   $white+                                     ;
+  \/\/.*                                      ;
   [0-9]+                                      { \s -> TokenInt (read s) }
   [0-9]+\.[0-9]+                              { \s -> TokenDouble (read s) }
   \,                                          { \_ -> TokenComma }

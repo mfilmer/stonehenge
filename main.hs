@@ -2,56 +2,24 @@ module Main where
 
 import qualified Data.Map.Strict as M
 import System.IO (hFlush, stdout, hIsEOF, stdin)
+import BuiltinFunctions
 
 import Grammar
 import Tokens
+import Workspace
 
-type Workspace = M.Map String Data
-emptyWorkspace :: Workspace
-emptyWorkspace = M.empty
-
-data Data = DataInt Int
-          | DataDouble Double
-          deriving (Eq)
-
-instance Show Data where
-  show (DataInt a) = show a
-  show (DataDouble a) = show a
-
-instance Num Data where
-  DataInt a + DataInt b = DataInt $ a + b
-  DataInt a + DataDouble b = DataDouble $ fromIntegral a + b
-  DataDouble a + DataInt b = DataDouble $ a + fromIntegral b
-  DataDouble a + DataDouble b = DataDouble $ a + b
-  DataInt a - DataInt b = DataInt $ a - b
-  DataInt a - DataDouble b = DataDouble $ fromIntegral a - b
-  DataDouble a - DataInt b = DataDouble $ a - fromIntegral b
-  DataDouble a - DataDouble b = DataDouble $ a - b
-  DataInt a * DataInt b = DataInt $ a * b
-  DataInt a * DataDouble b = DataDouble $ fromIntegral a * b
-  DataDouble a * DataInt b = DataDouble $ a * fromIntegral b
-  DataDouble a * DataDouble b = DataDouble $ a * b
-  abs (DataInt a) = DataInt $ abs a
-  abs (DataDouble a) = DataDouble $ abs a
-  signum (DataInt a) = DataInt $ signum a
-  signum (DataDouble a) = DataDouble $ signum a
-  fromInteger a = DataInt $ fromInteger a
-
-instance Fractional Data where
-  DataInt a / DataInt b = DataInt $ a `div` b
-  DataInt a / DataDouble b = DataDouble $ fromIntegral a / b
-  DataDouble a / DataInt b = DataDouble $ a / fromIntegral b
-  DataDouble a / DataDouble b = DataDouble $ a / b
-  fromRational a = DataDouble $ fromRational a
+startingWorkspace :: M.Map String Data
+startingWorkspace = M.fromList [("max", DataFcn 2 biMax)]
 
 evalWksp :: Exp -> Workspace -> (Data, Workspace)
 evalWksp (Assign name a) ws = (aVal, finalWs)
   where
     (aVal, ws1) = evalWksp a ws
     finalWs = M.insert name aVal ws1
-evalWksp (Call name a) ws = (sum vals, ws)
+evalWksp (Call name a) ws = (fcn aVal, ws)
   where
-    vals = map (fst.(\x -> evalWksp x ws)) a
+    DataFcn nArgs fcn = ws M.! name
+    aVal = map fst $ map (\x -> evalWksp x ws) a
 evalWksp (Plus a b) ws = (aVal + bVal, finalWs)
   where
     (aVal, ws1) = evalWksp a ws
@@ -91,5 +59,5 @@ mainLoop ws = do
 
 main :: IO ()
 main = do
-  mainLoop emptyWorkspace
+  mainLoop startingWorkspace
   
