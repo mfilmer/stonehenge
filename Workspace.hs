@@ -4,86 +4,98 @@ import qualified Data.Map.Strict as M
 import qualified Data.Array.IArray as A
 import Data.List (intersperse)
 
-type Workspace = M.Map String Data
+type Workspace = M.Map String SHData
 emptyWorkspace :: Workspace
 emptyWorkspace = M.empty
 
-data Data = DataValue DataValue
-          | DataCollection DataCollection
-          | DataFcn Int ([Data] -> Data)
+data SHData = DataValue SHValue
+            | DataArray SHArray
+            | DataMatrix SHMatrix
+            | DataTable SHTable
+            | DataFcn Int ([SHData] -> SHData)
 
-data DataValue = DataInt Integer
-               | DataDouble Double
+data SHValue = SHInt Integer
+             | SHDouble Double
 
-data DataCollection = DataArray (A.Array Integer Data)
-                    | DataMatrix (A.Array (Int, Int) DataValue)
-                    | DataTable [String] (A.Array (Int, Int) DataValue)
+data SHArray = SHArray (A.Array Integer SHData)
+data SHMatrix = SHMatrix (A.Array (Int, Int) SHValue)
+data SHColumn = SHColumn String (A.Array Integer SHValue)
+data SHTable = SHTable [SHColumn]
 
-buildSampleArray xs = DataArray $ A.array (1,fromIntegral (length xs)) [(i, x) | (i,x) <- zip [1..] xs]
-sampleArray1D = buildSampleArray [DataValue (DataInt (2*i)) | i <- [1..5]]
-sampleArray2D = buildSampleArray [DataCollection sampleArray1D | i <- [1..5]]
+buildSampleArray xs = SHArray $ A.array (1,fromIntegral (length xs)) [(i, x) | (i,x) <- zip [1..] xs]
+sampleArray1D = buildSampleArray [DataValue (SHInt (2*i)) | i <- [1..5]]
+sampleArray2D = buildSampleArray [DataArray sampleArray1D | _ <- [1..5]]
+sampleArray3D = buildSampleArray [DataArray sampleArray2D | _ <- [1..2]]
+sampleArray4D = buildSampleArray [DataArray sampleArray3D | _ <- [1..5]]
 
-
-instance Eq Data where
-  DataValue a == DataValue b = a == b
-  _ == _ = False
-
--- It might not make sense to have Data an instance of Ord
-instance Ord Data where
-  DataValue a < DataValue b = a < b
-  DataCollection _ < DataCollection _ = False
-  DataFcn _ _ < DataFcn _ _ = False
-  DataValue a <= DataValue b = a <= b
-  DataCollection _ <= DataCollection _ = False
-  DataFcn _ _ <= DataFcn _ _ = False
-  DataValue a > DataValue b = a > b
-  DataCollection _ > DataCollection _ = False
-  DataFcn _ _ > DataFcn _ _ = False
-  DataValue a >= DataValue b = a >= b
-  DataCollection _ >= DataCollection _ = False
-  DataFcn _ _ >= DataFcn _ _ = False
-  max (DataValue a) (DataValue b) = DataValue $ max a b
-  max (DataCollection a) (DataCollection _) = DataCollection a
-  max (DataFcn a b)(DataFcn _ _) = DataFcn a b
-  min (DataValue a) (DataValue b) = DataValue $ max a b
-  min (DataCollection a)(DataCollection _) = DataCollection a
-  min (DataFcn a b)(DataFcn _ _) = DataFcn a b
-
-instance Show Data where
+instance Show SHData where
   show (DataValue a) = show a
-  show (DataCollection a) = show a
+  show (DataArray a) = show a
+  show (DataMatrix a) = show a
+  show (DataTable a) = show a
   show (DataFcn nArgs _) = "Fcn(" ++ (intersperse ',' (take nArgs (cycle ['a'..'z']))) ++ ")"
 
-instance Eq DataValue where
-  DataInt a == DataInt b = a == b
-  DataInt a == DataDouble b = fromInteger a == b
-  DataDouble a == DataInt b = a == fromInteger b
-  DataDouble a == DataDouble b = a == b
+instance Eq SHValue where
+  SHInt a == SHInt b = a == b
+  SHInt a == SHDouble b = fromInteger a == b
+  SHDouble a == SHInt b = a == fromInteger b
+  SHDouble a == SHDouble b = a == b
 
-instance Ord DataValue where
-  DataInt a <= DataInt b = a <= b
-  DataInt a <= DataDouble b = fromInteger a <= b
-  DataDouble a <= DataInt b = a <= fromInteger b
-  DataDouble a <= DataDouble b  = a <= b
+instance Ord SHValue where
+  SHInt a <= SHInt b = a <= b
+  SHInt a <= SHDouble b = fromInteger a <= b
+  SHDouble a <= SHInt b = a <= fromInteger b
+  SHDouble a <= SHDouble b  = a <= b
 
-instance Show DataValue where
-  show (DataInt a) = show a
-  show (DataDouble a) = show a
+instance Show SHValue where
+  show (SHInt a) = show a
+  show (SHDouble a) = show a
 
-instance Show DataCollection where
-  show (DataArray arr)
+instance Show SHArray where
+  show (SHArray arr)
     | nLevels arr <= 1 = "[" ++ (foldr1 (\x y -> x ++ ", " ++ y) (fmap show arr)) ++ "]"
-    | nLevels arr == 2 = "[\n  " ++ (foldr1 (\x y -> x ++ ",\n  " ++ y) (fmap show arr)) ++ "\n]"
-    | nLevels arr >= 3 = "3"
-    where nLevels a
+    | nLevels arr == 2 = "[\n" ++ insertTabs ((foldr1 (\x y -> x ++ ",\n" ++ y) (fmap show arr))) ++ "\n]"
+    | nLevels arr >= 3 = "[\n" ++ insertTabs ((foldr1 (\x y -> x ++ ",\n\n\n" ++ y) (fmap show arr))) ++ "\n]"
+    where
+      insertTabs :: String -> String
+      insertTabs str = foldr1 (\x y -> x ++ "\n" ++ y) $ map ("  " ++) (lines str)
+      nLevels :: (A.Array Integer SHData) -> Int
+      nLevels a
             | length (A.indices a) == 0 = 1
             | otherwise = case (a A.! 1) of 
                             (DataValue _) -> 1
                             (DataFcn _ _) -> 1
-                            (DataCollection c) -> case c of 
-                                                    (DataArray da) -> 1 + nLevels da
-                                                    (DataMatrix _) -> 2
-                                                    (DataTable _ _) -> 2
+                            (DataArray (SHArray da)) -> 1 + nLevels da
+                            (DataMatrix _) -> 2
+                            (DataTable _) -> 2
+
+instance Show SHMatrix where
+  show a = ""
+
+instance Show SHColumn where
+  show a = ""
+
+instance Show SHTable where
+  show a = ""
+
+instance Num SHValue where
+  SHInt a + SHInt b = SHInt $ a + b
+  SHInt a + SHDouble b = SHDouble $ fromIntegral a + b
+  SHDouble a + SHInt b = SHDouble $ a + fromIntegral b
+  SHDouble a + SHDouble b = SHDouble $ a + b
+  SHInt a - SHInt b = SHInt $ a - b
+  SHInt a - SHDouble b = SHDouble $ fromIntegral a - b
+  SHDouble a - SHInt b = SHDouble $ a - fromIntegral b
+  SHDouble a - SHDouble b = SHDouble $ a - b
+  SHInt a * SHInt b = SHInt $ a * b
+  SHInt a * SHDouble b = SHDouble $ fromIntegral a * b
+  SHDouble a * SHInt b = SHDouble $ a * fromIntegral b
+  SHDouble a * SHDouble b = SHDouble $ a * b
+  abs (SHInt a) = SHInt $ abs a
+  abs (SHDouble a) = SHDouble $ abs a
+  signum (SHInt a) = SHInt $ signum a
+  signum (SHDouble a) = SHDouble $ signum a
+  fromInteger a = SHInt $ fromInteger a
   
 
 {-
