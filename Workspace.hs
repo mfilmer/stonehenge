@@ -2,6 +2,7 @@ module Workspace where
 
 import qualified Data.Map.Strict as M
 import qualified Data.Array.IArray as A
+import Text.Printf (printf)
 import Data.List (intersperse)
 
 type Workspace = M.Map String SHData
@@ -27,6 +28,11 @@ sampleArray1D = buildSampleArray [DataValue (SHInt (2*i)) | i <- [1..5]]
 sampleArray2D = buildSampleArray [DataArray sampleArray1D | _ <- [1..5]]
 sampleArray3D = buildSampleArray [DataArray sampleArray2D | _ <- [1..2]]
 sampleArray4D = buildSampleArray [DataArray sampleArray3D | _ <- [1..5]]
+
+sampleMatrix = SHMatrix $ A.array ((1,1),(5,5)) [((x,y), SHInt (fromIntegral (x+y))) | x <- [1..5], y <- [1..5]]
+
+sampleColumnInt = SHColumn "Int Col" (A.array (1, 10) [(i,fromIntegral i) | i <- [1..10]])
+sampleColumnDouble = SHColumn "Double Col" (A.array (1, 10) [(i,SHDouble (fromIntegral i*0.1)) | i <- [1..10]])
 
 instance Show SHData where
   show (DataValue a) = show a
@@ -69,11 +75,33 @@ instance Show SHArray where
                             (DataMatrix _) -> 2
                             (DataTable _) -> 2
 
+colShow :: Int -> SHValue -> String
+colShow n (SHInt a) = printf ("%" ++ show n ++ "d") a
+colShow n (SHDouble a) = printf ("%" ++ show n ++ ".3e") a
+
 instance Show SHMatrix where
-  show a = ""
+  show (SHMatrix arr) =
+    "[" ++ 
+    concat (intersperse ";\n " [concat (intersperse  ", " [colShow 6 (arr A.! (r,c)) | c <- [cmin..cmax]]) | r <- [rmin..rmax]])
+    ++ "]"
+    where
+      ((rmin,cmin),(rmax,cmax)) = A.bounds arr
 
 instance Show SHColumn where
-  show a = ""
+  show (SHColumn label arr)
+    | n == 0 = ""
+    | otherwise = concat $ intersperse "\n" (label:sizedStrs)
+    where
+      (_,n) = A.bounds arr
+      labelLen = length label
+      sizedStrs = case (arr A.! 1) of
+                    (SHDouble a) -> map (colShow (max 8 labelLen)) (A.elems arr)
+                    (SHInt a) -> map (printf ("%" ++ show (max maxWidth labelLen) ++ "s")) rawStrs
+                      where
+                        maxWidth = maximum (map length rawStrs)
+                        rawStrs :: [String]
+                        rawStrs = map show (A.elems arr)
+                    
 
 instance Show SHTable where
   show a = ""
