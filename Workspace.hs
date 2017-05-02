@@ -34,6 +34,8 @@ sampleMatrix = SHMatrix $ A.array ((1,1),(5,5)) [((x,y), SHInt (fromIntegral (x+
 sampleColumnInt = SHColumn "Int Col" (A.array (1, 10) [(i,fromIntegral i) | i <- [1..10]])
 sampleColumnDouble = SHColumn "Double Col" (A.array (1, 10) [(i,SHDouble (fromIntegral i*0.1)) | i <- [1..10]])
 
+sampleTable = SHTable [sampleColumnInt, sampleColumnDouble, sampleColumnInt]
+
 instance Show SHData where
   show (DataValue a) = show a
   show (DataArray a) = show a
@@ -90,21 +92,24 @@ instance Show SHMatrix where
 instance Show SHColumn where
   show (SHColumn label arr)
     | n == 0 = ""
-    | otherwise = concat $ intersperse "\n" (label:sizedStrs)
+    | otherwise = concat $ intersperse "\n" (label:(take width (repeat '-')):sizedStrs)
     where
       (_,n) = A.bounds arr
       labelLen = length label
+      width = case (arr A.! 1) of
+              (SHInt _) -> max labelLen (maximum (map length rawStrs))
+              (SHDouble _) -> 10
+      rawStrs = map show (A.elems arr)
       sizedStrs = case (arr A.! 1) of
-                    (SHDouble a) -> map (colShow (max 8 labelLen)) (A.elems arr)
-                    (SHInt a) -> map (printf ("%" ++ show (max maxWidth labelLen) ++ "s")) rawStrs
-                      where
-                        maxWidth = maximum (map length rawStrs)
-                        rawStrs :: [String]
-                        rawStrs = map show (A.elems arr)
+                    (SHDouble a) -> map (colShow (max 10 labelLen)) (A.elems arr)
+                    (SHInt a) -> map (printf ("%" ++ show width ++ "s")) rawStrs
+
                     
 
 instance Show SHTable where
-  show a = ""
+  show (SHTable cols) = foldr1 assemble (map show cols)
+    where
+      assemble c1 c2 = concat $ intersperse "\n" $ zipWith (\x y -> x ++ "  " ++ y) (lines c1) (lines c2)
 
 instance Num SHValue where
   SHInt a + SHInt b = SHInt $ a + b
