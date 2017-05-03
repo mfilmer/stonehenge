@@ -70,7 +70,7 @@ instance Show SHArray where
       nLevels :: (A.Array Integer SHData) -> Int
       nLevels a
             | length (A.indices a) == 0 = 1
-            | otherwise = case (a A.! 1) of 
+            | otherwise = case (a A.! 1) of
                             (DataValue _) -> 1
                             (DataFcn _ _) -> 1
                             (DataArray (SHArray da)) -> 1 + nLevels da
@@ -83,7 +83,7 @@ colShow n (SHDouble a) = printf ("%" ++ show n ++ ".3e") a
 
 instance Show SHMatrix where
   show (SHMatrix arr) =
-    "[" ++ 
+    "[" ++
     concat (intersperse ";\n " [concat (intersperse  ", " [colShow 6 (arr A.! (r,c)) | c <- [cmin..cmax]]) | r <- [rmin..rmax]])
     ++ "]"
     where
@@ -129,3 +129,11 @@ instance Num SHValue where
   signum (SHInt a) = SHInt $ signum a
   signum (SHDouble a) = SHDouble $ signum a
   fromInteger a = SHInt $ fromInteger a
+
+instance Fractional SHValue where
+  SHInt a / SHInt b = SHInt $ a `div` b
+  SHInt a / SHDouble b = SHDouble $ fromIntegral a / b
+  SHDouble a / SHInt b = SHDouble $ a / fromIntegral b
+  SHDouble a / SHDouble b = SHDouble $ a / b
+  fromRational a = SHDouble $ fromRational a
+  
