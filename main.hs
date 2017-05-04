@@ -2,6 +2,7 @@ module Main where
 
 import qualified Data.Map.Strict as M
 import System.IO (hFlush, stdout, hIsEOF, stdin)
+import System.Environment (getArgs)
 import BuiltinFunctions
 
 import Grammar
@@ -54,8 +55,8 @@ evalStmnts ws ((StmntAssign name exp):xs) = do
     val = evalExp exp ws
     ws1 = M.insert name val ws
 
-mainLoop :: Workspace -> IO()
-mainLoop ws = do
+replLoop :: Workspace -> IO ()
+replLoop ws = do
   putStr "> "
   hFlush stdout
   iseof <- hIsEOF stdin
@@ -63,11 +64,20 @@ mainLoop ws = do
     then return ()
     else do
       line <- getLine
-      let ast = expCalc (alexScanTokens line)
       ws1 <- (evalStmnts ws) . reverse . expCalc $ alexScanTokens line
-      mainLoop ws1
+      replLoop ws1
+
+runProgram :: Workspace -> [String] -> IO ()
+runProgram _ [] = return ()
+runProgram ws (file:files) = do
+  contents <- readFile file
+  let ast = expCalc (alexScanTokens contents)
+  ws1 <- (evalStmnts ws) . reverse . expCalc $ alexScanTokens contents
+  runProgram ws1 files
 
 main :: IO ()
-main = do
-  mainLoop startingWorkspace
+main = getArgs >>= parse
+  where
+    parse [] = replLoop startingWorkspace
+    parse a = runProgram startingWorkspace a
   
