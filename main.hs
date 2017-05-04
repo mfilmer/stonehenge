@@ -11,20 +11,6 @@ import Workspace
 startingWorkspace :: M.Map String SHData
 startingWorkspace = M.fromList [("max", DataFcn 2 biMax)]
 
-{-
-evalWksp :: Exp -> Workspace -> Maybe (Data, Workspace)
-evalWksp (Assign name a) ws = undefined
-evalWksp (Call name a) ws = undefined
-evalWksp (Plus a b) ws = undefined
-evalWksp (Minus a b) ws = undefined
-evalWksp (Times a b) ws = undefined
-evalWksp (Div a b) ws = undefined
-evalWksp (Negate a) ws = undefined
-evalWksp (Int a) ws = undefined
-evalWksp (Double a) ws = undefined
-evalWksp (Var name) ws = undefined
--}
-
 evalExp :: Exp -> Workspace -> SHData
 evalExp (Call name a) ws = fcn aVal
   where
@@ -80,9 +66,6 @@ mainLoop ws = do
       let ast = expCalc (alexScanTokens line)
       ws1 <- (evalStmnts ws) . reverse . expCalc $ alexScanTokens line
       mainLoop ws1
-      --let (newData, newWs) = evalWksp ast ws
-      --print newData
-      --mainLoop newWs
 
 main :: IO ()
 main = do
