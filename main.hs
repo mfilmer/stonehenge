@@ -1,6 +1,7 @@
 module Main where
 
 import qualified Data.Map.Strict as M
+import qualified Data.Array.IArray as A
 import System.IO (hFlush, stdout, hIsEOF, stdin)
 import System.Environment (getArgs)
 import BuiltinFunctions
@@ -38,6 +39,10 @@ evalExp (Negate a) ws = DataValue (-aVal)
     DataValue aVal = evalExp a ws
 evalExp (Int a) ws = DataValue (SHInt (fromIntegral a))
 evalExp (Double a) ws = DataValue (SHDouble a)
+evalExp (Array a) ws = DataArray $ SHArray $ A.array (1,n) [(i,x) | (i,x) <- zip [1..] rawList]
+  where
+    n = fromIntegral $ length a
+    rawList = reverse $ map (\x -> evalExp x ws) a
 evalExp (Var name) ws = ws M.! name
 
 

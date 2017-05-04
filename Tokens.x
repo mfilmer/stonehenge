@@ -18,6 +18,8 @@ tokens :-
   \/                                          { \_ -> TokenDiv }
   \(                                          { \_ -> TokenLParen }
   \)                                          { \_ -> TokenRParen }
+  \[                                          { \_ -> TokenLBracket }
+  \]                                          { \_ -> TokenRBracket }
   \;                                          { \_ -> TokenSemicolon }
   [a-zA-Z\_][a-zA-Z0-9\_]*                    { \s -> TokenSym s }
 {
@@ -32,6 +34,8 @@ data Token = TokenInt Int
            | TokenDiv
            | TokenLParen
            | TokenRParen
+           | TokenLBracket
+           | TokenRBracket
            | TokenSemicolon
            | TokenSym String
            deriving (Eq, Show)

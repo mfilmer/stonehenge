@@ -19,6 +19,8 @@ import Tokens
     '/'     { TokenDiv }
     '('     { TokenLParen }
     ')'     { TokenRParen }
+    '['     { TokenLBracket }
+    ']'     { TokenRBracket }
     ';'     { TokenSemicolon }
 
 %right '='
@@ -43,7 +45,10 @@ Exp : var '(' args ')'      { Call $1 $3 }
     | '-' Exp %prec NEG     { Negate $2 }
     | int                   { Int $1 }
     | double                { Double $1 }
+    | Array                 { $1 }
     | var                   { Var $1 }
+
+Array : '[' args ']'        { Array $2 }
 
 args : {- empty -}          { [] }
      | Exp                  { [$1] }
@@ -66,6 +71,7 @@ data Exp = Assign String Exp
          | Negate Exp
          | Int Int
          | Double Double
+         | Array [Exp]
          | Var String
          deriving Show
 }
