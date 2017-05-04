@@ -18,9 +18,8 @@ tokens :-
   \/                                          { \_ -> TokenDiv }
   \(                                          { \_ -> TokenLParen }
   \)                                          { \_ -> TokenRParen }
-  \;                                          { \_ -> TokenSemicolon}
+  \;                                          { \_ -> TokenSemicolon }
   [a-zA-Z\_][a-zA-Z0-9\_]*                    { \s -> TokenSym s }
-
 {
 
 data Token = TokenInt Int

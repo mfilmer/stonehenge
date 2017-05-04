@@ -28,14 +28,19 @@ import Tokens
 
 %%
 
-Exp : var '=' Exp ';'       { Assign $1 $3 }
-    | var '(' args ')'      { Call $1 $3 }
-    | Exp '+' Exp ';'       { Plus $1 $3 }
-    | Exp '-' Exp ';'       { Minus $1 $3 }
-    | Exp '*' Exp ';'       { Times $1 $3 }
-    | Exp '/' Exp ';'       { Div $1 $3 }
+Stmnts : Stmnt              { [$1] }
+       | Stmnts Stmnt       { $2 : $1 }
+
+Stmnt : Exp ';'             { Stmnt $1 }
+      | var '=' Exp ';'     { StmntAssign $1 $3 }
+
+Exp : var '(' args ')'      { Call $1 $3 }
+    | Exp '+' Exp           { Plus $1 $3 }
+    | Exp '-' Exp           { Minus $1 $3 }
+    | Exp '*' Exp           { Times $1 $3 }
+    | Exp '/' Exp           { Div $1 $3 }
     | '(' Exp ')'           { $2 }
-    | '-' Exp ';' %prec NEG     { Negate $2 }
+    | '-' Exp %prec NEG     { Negate $2 }
     | int                   { Int $1 }
     | double                { Double $1 }
     | var                   { Var $1 }
@@ -47,7 +52,10 @@ args : {- empty -}          { [] }
 {
 
 parseError :: [Token] -> a
-parseError _= error "Parse Error"
+parseError a = error "Parse Error"
+
+data Stmnt = Stmnt Exp
+          | StmntAssign String Exp
 
 data Exp = Assign String Exp
          | Call String [Exp]

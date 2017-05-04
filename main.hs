@@ -25,37 +25,48 @@ evalWksp (Double a) ws = undefined
 evalWksp (Var name) ws = undefined
 -}
 
-evalWksp :: Exp -> Workspace -> (SHData, Workspace)
-evalWksp (Assign name a) ws = (aVal, finalWs)
-  where
-    (aVal, ws1) = evalWksp a ws
-    finalWs = M.insert name aVal ws1
-evalWksp (Call name a) ws = (fcn aVal, ws)
+evalExp :: Exp -> Workspace -> SHData
+evalExp (Call name a) ws = fcn aVal
   where
     DataFcn nArgs fcn = ws M.! name
-    aVal = map fst $ map (\x -> evalWksp x ws) a
-evalWksp (Plus a b) ws = (DataValue (aVal + bVal), finalWs)
+    aVal = map (\x -> evalExp x ws) a
+evalExp (Plus a b) ws = DataValue (aVal + bVal)
   where
-    (DataValue aVal, ws1) = evalWksp a ws
-    (DataValue bVal, finalWs) = evalWksp b ws1
-evalWksp (Minus a b) ws = (DataValue (aVal - bVal), finalWs)
+    DataValue aVal = evalExp a ws
+    DataValue bVal = evalExp b ws
+evalExp (Minus a b) ws = DataValue (aVal - bVal)
   where
-    (DataValue aVal, ws1) = evalWksp a ws
-    (DataValue bVal, finalWs) = evalWksp b ws1
-evalWksp (Times a b) ws = (DataValue (aVal * bVal), finalWs)
+    DataValue aVal= evalExp a ws
+    DataValue bVal = evalExp b ws
+evalExp (Times a b) ws = DataValue (aVal * bVal)
   where
-    (DataValue aVal, ws1) = evalWksp a ws
-    (DataValue bVal, finalWs) = evalWksp b ws1
-evalWksp (Div a b) ws = (DataValue (aVal / bVal), finalWs)
+    DataValue aVal = evalExp a ws
+    DataValue bVal = evalExp b ws
+evalExp (Div a b) ws = DataValue (aVal / bVal)
   where
-    (DataValue aVal, ws1) = evalWksp a ws
-    (DataValue bVal, finalWs) = evalWksp b ws1
-evalWksp (Negate a) ws = (DataValue (-aVal), finalWs)
+    DataValue aVal= evalExp a ws
+    DataValue bVal = evalExp b ws
+evalExp (Negate a) ws = DataValue (-aVal)
   where
-    (DataValue aVal, finalWs) = evalWksp a ws
-evalWksp (Int a) ws = (DataValue (SHInt (fromIntegral a)), ws)
-evalWksp (Double a) ws = (DataValue (SHDouble a), ws)
-evalWksp (Var name) ws = (ws M.! name, ws)
+    DataValue aVal = evalExp a ws
+evalExp (Int a) ws = DataValue (SHInt (fromIntegral a))
+evalExp (Double a) ws = DataValue (SHDouble a)
+evalExp (Var name) ws = ws M.! name
+
+
+evalStmnts :: Workspace -> [Stmnt] -> IO (Workspace)
+evalStmnts ws [] = return ws
+evalStmnts ws ((Stmnt exp):xs) = do
+  putStrLn $ show val
+  evalStmnts ws xs
+  where
+    val = evalExp exp ws
+evalStmnts ws ((StmntAssign name exp):xs) = do
+  putStrLn $ show val
+  evalStmnts ws1 xs
+  where
+    val = evalExp exp ws
+    ws1 = M.insert name val ws
 
 mainLoop :: Workspace -> IO()
 mainLoop ws = do
@@ -67,9 +78,11 @@ mainLoop ws = do
     else do
       line <- getLine
       let ast = expCalc (alexScanTokens line)
-      let (newData, newWs) = evalWksp ast ws
-      print newData
-      mainLoop newWs
+      ws1 <- (evalStmnts ws) . reverse . expCalc $ alexScanTokens line
+      mainLoop ws1
+      --let (newData, newWs) = evalWksp ast ws
+      --print newData
+      --mainLoop newWs
 
 main :: IO ()
 main = do
